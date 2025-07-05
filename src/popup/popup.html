@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JWT Token Detective</title>
+</head>
+<body>
+  <div class="header">
+    <h1>🔍 JWT Token Detective</h1>
+  </div>
+  
+  <div class="content">
+    <div id="loading" class="loading">
+      Loading tokens...
+    </div>
+    
+    <div id="empty-state" class="empty-state" style="display: none;">
+      <div class="icon">🔒</div>
+      <h3>No JWT tokens detected</h3>
+      <p>Make some requests with Bearer tokens to see them here</p>
+    </div>
+    
+    <div id="tokens-container">
+      <!-- Token groups will be inserted here -->
+    </div>
+  </div>
+  
+  <div class="stats">
+    <span id="stats-text">0 tokens detected</span>
+    <button id="refresh-btn" class="refresh-btn">Refresh</button>
+  </div>
+
+  <script type="module">
+    import "./popup.css";
+    import { JWTPopup } from "./popup.js";
+
+    // Initialize the popup when DOM is loaded
+    document.addEventListener("DOMContentLoaded", () => {
+      new JWTPopup();
+    });
+  </script>
+</body>
+</html>

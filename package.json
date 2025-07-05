@@ -1,0 +1,44 @@
+{
+  "name": "jwt-token-detective",
+  "version": "1.0.0",
+  "description": "Chrome extension to detect and manage JWT tokens from network requests",
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "chrome-extension",
+    "jwt",
+    "authentication",
+    "token",
+    "security",
+    "developer-tools"
+  ],
+  "author": "Nico Vignola <n.vignola.engineer@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "@types/node": "^24.0.10",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.0",
+    "vite-plugin-html": "^3.2.2",
+    "vite-plugin-static-copy": "^1.0.2"
+  },
+  "engines": {
+    "node": "22.16.0",
+    "pnpm": "10.8.1"
+  },
+  "packageManager": "pnpm@10.8.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nvignola/jwt-token-detective.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nvignola/jwt-token-detective/issues"
+  },
+  "homepage": "https://github.com/nvignola/jwt-token-detective#readme"
+}
