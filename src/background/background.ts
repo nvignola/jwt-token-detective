@@ -4,7 +4,8 @@ import { ExtensionStorage, JWTTokenGroup, RequestInfo } from "@/types/jwt";
 class JWTDetectorBackground {
   private static readonly STORAGE_KEY = "jwt_detector_data";
   private static readonly MAX_TOKEN_GROUPS = 100;
-  private static readonly RETENTION_HOURS = 24;
+  private static readonly RETENTION_HOURS = 2;
+  private static readonly CLEAN_UP_INTERVAL_MINUTES = 15; // 15 minutes
 
   constructor() {
     this.setupWebRequestListener();
@@ -206,10 +207,10 @@ class JWTDetectorBackground {
    * Set up periodic cleanup of old data
    */
   private setupStorageCleanup(): void {
-    // Clean up every hour
+    // Clean up every 15 minutes
     setInterval(() => {
       this.cleanupOldData();
-    }, 60 * 60 * 1000);
+    }, JWTDetectorBackground.CLEAN_UP_INTERVAL_MINUTES * 60 * 1000);
 
     // Also clean up on startup
     this.cleanupOldData();
@@ -223,20 +224,21 @@ class JWTDetectorBackground {
       const storage = await this.getStorage();
       const cutoffTime =
         Date.now() - JWTDetectorBackground.RETENTION_HOURS * 60 * 60 * 1000;
+      const now = Date.now();
 
-      console.log(
-        "Running cleanup, cutoff time:",
-        new Date(cutoffTime).toISOString()
-      );
+      console.log("Running cleanup at:", new Date().toISOString());
+      console.log("Current time (ms):", now);
+      console.log("Cutoff time:", new Date(cutoffTime).toISOString());
+      console.log("Before cleanup - Total groups:", storage.tokenGroups.length);
 
-      // Filter out old token groups and update expired status
+      // More aggressive cleanup: remove expired tokens that are old
       storage.tokenGroups = storage.tokenGroups
         .map((group) => {
           // Recalculate expiry status based on current time
           const updatedGroup = {
             ...group,
             isExpired: JWTUtils.isTokenExpired(group.payload),
-            // Remove old requests within each group (but keep recent ones even if token is expired)
+            // Remove old requests within each group
             requests: group.requests.filter(
               (req) => req.timestamp.getTime() > cutoffTime
             ),
@@ -245,19 +247,95 @@ class JWTDetectorBackground {
           return updatedGroup;
         })
         .filter((group) => {
-          // Only remove groups if they have no recent requests AND are very old
-          const hasRecentRequests = group.requests.length > 0;
-          const groupIsVeryOld = group.lastSeen.getTime() < cutoffTime;
+          // Calculate if token expired more than 1 hour ago
+          let expiredMoreThanAnHour = false;
+          let expiryTime = null;
 
-          // Keep the group if it has recent requests OR if it's not very old
-          return hasRecentRequests || !groupIsVeryOld;
+          try {
+            // Check using expiryDate if available
+            if (group.expiryDate) {
+              if (
+                group.expiryDate instanceof Date &&
+                !isNaN(group.expiryDate.getTime())
+              ) {
+                expiryTime = group.expiryDate.getTime();
+              } else if (
+                typeof group.expiryDate === "string" ||
+                typeof group.expiryDate === "number"
+              ) {
+                const parsedDate = new Date(group.expiryDate);
+                if (!isNaN(parsedDate.getTime())) {
+                  expiryTime = parsedDate.getTime();
+                }
+              }
+            }
+
+            // Fallback: check using payload.exp
+            if (
+              !expiryTime &&
+              group.payload &&
+              typeof group.payload.exp === "number"
+            ) {
+              expiryTime = group.payload.exp * 1000; // Convert to milliseconds
+            }
+
+            if (expiryTime) {
+              const hoursExpired = (now - expiryTime) / (60 * 60 * 1000);
+              expiredMoreThanAnHour = hoursExpired > 1;
+
+              console.log("Token analysis:", {
+                tokenId: group.tokenId,
+                expiryTime: new Date(expiryTime).toISOString(),
+                currentTime: new Date(now).toISOString(),
+                hoursExpired: hoursExpired.toFixed(2),
+                expiredMoreThanAnHour,
+              });
+            } else {
+              console.log("Token analysis - no valid expiry found:", {
+                tokenId: group.tokenId,
+                expiryDate: group.expiryDate,
+                payloadExp: group.payload?.exp,
+              });
+            }
+          } catch (error) {
+            console.error("Error processing token expiry:", {
+              tokenId: group.tokenId,
+              error: error instanceof Error ? error.message : String(error),
+              expiryDate: group.expiryDate,
+              payloadExp: group.payload?.exp,
+            });
+            // If we can't process expiry, keep the token to be safe
+            return true;
+          }
+
+          const isCurrentlyExpired = JWTUtils.isTokenExpired(group.payload);
+
+          // SIMPLIFIED LOGIC: Remove if expired more than 1 hour ago
+          const shouldKeep = !isCurrentlyExpired || !expiredMoreThanAnHour;
+
+          if (!shouldKeep) {
+            console.log("🗑️ REMOVING expired token group:", {
+              tokenId: group.tokenId,
+              reason: "Expired more than 1 hour ago",
+              isCurrentlyExpired,
+              expiredMoreThanAnHour,
+            });
+          } else {
+            console.log("✅ KEEPING token group:", {
+              tokenId: group.tokenId,
+              isCurrentlyExpired,
+              expiredMoreThanAnHour,
+              reason: isCurrentlyExpired
+                ? "Expired but <1 hour ago"
+                : "Still valid",
+            });
+          }
+
+          return shouldKeep;
         });
 
+      console.log("After cleanup - Total groups:", storage.tokenGroups.length);
       await this.saveStorage(storage);
-      console.log(
-        "Cleanup completed, remaining groups:",
-        storage.tokenGroups.length
-      );
     } catch (error) {
       console.error("Error cleaning up old data:", error);
     }
