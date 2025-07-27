@@ -8,7 +8,8 @@
     "build": "vite build",
     "clean": "rm -rf dist",
     "type-check": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "release": "pnpm clean && pnpm type-check && pnpm build && cd dist && zip -r ../jwt-token-detective-release.zip . && cd .. && echo 'Release package created: jwt-token-detective-release.zip'"
   },
   "keywords": [
     "chrome-extension",
