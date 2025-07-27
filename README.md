@@ -22,7 +22,7 @@ So I built JWT Token Detective to make JWT debugging effortless. For fun and pro
 - **⏰ Expiry Tracking** - Shows when tokens expire and marks expired ones in red
 - **📋 One-Click Copy** - Copy any JWT token to clipboard instantly
 - **🔍 Request History** - See all API calls made with each token, with method badges and timestamps
-- **🧹 Auto Cleanup** - Automatically removes old tokens after 24 hours
+- **🧹 Smart Cleanup** - Removes old request history after 2 hours, expired tokens after 1 hour grace period
 - **🔒 Privacy First** - All data stays local, nothing sent to external servers
 
 ## 📦 Installation
@@ -103,7 +103,7 @@ jwt-token-detective/
 - **Local Storage Only** - Tokens are stored in Chrome's local storage, never transmitted
 - **No External Requests** - Extension doesn't make any network calls
 - **Minimal Permissions** - Only requests necessary permissions for token detection
-- **Auto Cleanup** - Old tokens are automatically removed after 24 hours
+- **Smart Cleanup** - Request history cleaned after 2 hours, expired tokens removed 1 hour after expiry
 
 ## 🤝 Contributing
 
