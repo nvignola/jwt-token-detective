@@ -68,7 +68,7 @@ export class JWTPopup {
                     ? group.requests.map((req) => ({
                         ...req,
                         timestamp: this.parseDate(req.timestamp) || new Date(),
-                      }))
+                      })).filter(req => req && req.timestamp instanceof Date)
                     : [],
                 };
               }),
@@ -140,6 +140,12 @@ export class JWTPopup {
   createTokenElement(group: JWTTokenGroup): HTMLElement {
     const element = document.createElement("div");
     element.className = "token-group";
+
+    // Defensive check: ensure group has valid requests array
+    if (!group || !Array.isArray(group.requests)) {
+      console.warn("Invalid group data:", group);
+      group.requests = [];
+    }
 
     // Determine expiry text
     let expiryText = "No expiry";
