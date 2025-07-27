@@ -2,7 +2,9 @@
 
 A Chrome extension that automatically detects and manages JWT tokens from network requests. Perfect for developers who work with authentication APIs and want to debug token flows without diving into network tabs.
 
-![JWT Token Detective Screenshot](https://via.placeholder.com/600x300/2563eb/white?text=JWT+Token+Detective+UI)
+<div align="center">
+  <img src="./preview.png" alt="JWT Token Detective Screenshot" width="500"/>
+</div>
 
 ## ✨ Why I Built This
 
