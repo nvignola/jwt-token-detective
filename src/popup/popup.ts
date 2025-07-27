@@ -1,4 +1,12 @@
+import { ExtensionStorage, JWTTokenGroup, RequestInfo } from "../types/jwt";
+
 export class JWTPopup {
+  private tokensContainer: HTMLElement | null;
+  private emptyState: HTMLElement | null;
+  private loading: HTMLElement | null;
+  private statsText: HTMLElement | null;
+  private refreshBtn: HTMLElement | null;
+
   constructor() {
     this.tokensContainer = document.getElementById("tokens-container");
     this.emptyState = document.getElementById("empty-state");
@@ -10,7 +18,7 @@ export class JWTPopup {
   }
 
   async init() {
-    this.refreshBtn.addEventListener("click", () => this.loadTokens());
+    this.refreshBtn?.addEventListener("click", () => this.loadTokens());
     await this.loadTokens();
   }
 
@@ -25,10 +33,10 @@ export class JWTPopup {
     }
   }
 
-  async getStorage() {
+  async getStorage(): Promise<ExtensionStorage> {
     return new Promise((resolve) => {
       chrome.storage.local.get(["jwt_detector_data"], (result) => {
-        const data = result.jwt_detector_data;
+        const data = result.jwt_detector_data as ExtensionStorage | undefined;
 
         if (data && data.tokenGroups && Array.isArray(data.tokenGroups)) {
           try {
@@ -78,7 +86,7 @@ export class JWTPopup {
     });
   }
 
-  parseDate(dateValue) {
+  parseDate(dateValue: Date | string | null) {
     if (!dateValue) {
       return null;
     }
@@ -98,7 +106,7 @@ export class JWTPopup {
     }
   }
 
-  renderTokens(tokenGroups) {
+  renderTokens(tokenGroups: JWTTokenGroup[]) {
     this.hideLoading();
 
     if (tokenGroups.length === 0) {
@@ -108,6 +116,11 @@ export class JWTPopup {
 
     this.hideEmptyState();
     const fragment = document.createDocumentFragment();
+
+    if (!this.tokensContainer) {
+      console.error("Tokens container not found");
+      return;
+    }
     this.tokensContainer.innerHTML = "";
 
     // Sort by last seen (most recent first)
@@ -117,13 +130,14 @@ export class JWTPopup {
 
     sortedGroups.forEach((group) => {
       const tokenElement = this.createTokenElement(group);
-      this.tokensContainer.appendChild(tokenElement);
+      fragment.appendChild(tokenElement);
     });
 
+    this.tokensContainer.appendChild(fragment);
     this.updateStats(tokenGroups);
   }
 
-  createTokenElement(group) {
+  createTokenElement(group: JWTTokenGroup): HTMLElement {
     const element = document.createElement("div");
     element.className = "token-group";
 
@@ -185,7 +199,7 @@ export class JWTPopup {
     return element;
   }
 
-  renderRequests(requests) {
+  renderRequests(requests: RequestInfo[]): string {
     console.log("Rendering requests:", requests.length, "requests");
 
     if (!requests || requests.length === 0) {
@@ -217,9 +231,20 @@ export class JWTPopup {
       .join("");
   }
 
-  setupTokenEvents(element, group) {
+  setupTokenEvents(element: HTMLElement, group: JWTTokenGroup) {
+    if (!element || !group) {
+      console.error("Invalid element or group for token events");
+      return;
+    }
+
     // Copy button
-    const copyBtn = element.querySelector(".copy-btn");
+    const copyBtn = element.querySelector(".copy-btn") as HTMLElement;
+
+    if (!copyBtn) {
+      console.error("Copy button not found in token element");
+      return;
+    }
+
     copyBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       this.copyToClipboard(group.raw, copyBtn);
@@ -231,26 +256,26 @@ export class JWTPopup {
 
     const toggleRequests = () => {
       const requestsList = element.querySelector(".requests-list");
-      const isExpanded = requestsList.classList.contains("expanded");
+      const isExpanded = requestsList?.classList.contains("expanded");
 
       if (isExpanded) {
-        requestsList.classList.remove("expanded");
-        toggleBtn.textContent = "▼";
+        requestsList?.classList.remove("expanded");
+        toggleBtn && (toggleBtn.textContent = "▼");
       } else {
-        requestsList.classList.add("expanded");
-        toggleBtn.textContent = "▲";
+        requestsList?.classList.add("expanded");
+        toggleBtn && (toggleBtn.textContent = "▲");
       }
     };
 
-    toggleBtn.addEventListener("click", (e) => {
+    toggleBtn?.addEventListener("click", (e) => {
       e.stopPropagation();
       toggleRequests();
     });
 
-    header.addEventListener("click", toggleRequests);
+    header?.addEventListener("click", toggleRequests);
   }
 
-  async copyToClipboard(text, button) {
+  async copyToClipboard(text: string, button: HTMLElement) {
     try {
       await navigator.clipboard.writeText(text);
       const originalText = button.textContent;
@@ -273,7 +298,7 @@ export class JWTPopup {
     }
   }
 
-  formatDate(date) {
+  formatDate(date: string | number | Date) {
     if (!date) return "Unknown";
 
     // Ensure we have a proper Date object
@@ -297,7 +322,7 @@ export class JWTPopup {
     }
   }
 
-  formatDateTime(date) {
+  formatDateTime(date: string | number | Date): string {
     if (!date) return "Unknown";
 
     // Ensure we have a proper Date object
@@ -322,7 +347,7 @@ export class JWTPopup {
     }
   }
 
-  updateStats(tokenGroups) {
+  updateStats(tokenGroups: JWTTokenGroup[]) {
     const validTokens = tokenGroups.filter((g) => !g.isExpired).length;
     const expiredTokens = tokenGroups.filter((g) => g.isExpired).length;
 
@@ -333,37 +358,41 @@ export class JWTPopup {
       text += ` (${expiredTokens} expired)`;
     }
 
-    this.statsText.textContent = text;
+    if (this.statsText) {
+      this.statsText.textContent = text;
+    }
   }
 
   showLoading() {
-    this.loading.style.display = "block";
-    this.emptyState.style.display = "none";
-    this.tokensContainer.style.display = "none";
+    if (this.loading) this.loading.style.display = "block";
+    if (this.emptyState) this.emptyState.style.display = "none";
+    if (this.tokensContainer) this.tokensContainer.style.display = "none";
   }
 
   hideLoading() {
-    this.loading.style.display = "none";
+    if (this.loading) this.loading.style.display = "none";
   }
 
   showEmptyState() {
-    this.emptyState.style.display = "block";
-    this.tokensContainer.style.display = "none";
-    this.statsText.textContent = "0 tokens detected";
+    if (this.emptyState) this.emptyState.style.display = "block";
+    if (this.tokensContainer) this.tokensContainer.style.display = "none";
+    if (this.statsText) this.statsText.textContent = "0 tokens detected";
   }
 
   hideEmptyState() {
-    this.emptyState.style.display = "none";
-    this.tokensContainer.style.display = "block";
+    if (this.emptyState) this.emptyState.style.display = "none";
+    if (this.tokensContainer) this.tokensContainer.style.display = "block";
   }
 
   showError() {
     this.hideLoading();
-    this.tokensContainer.innerHTML = `
+    if (this.tokensContainer) {
+      this.tokensContainer.innerHTML = `
           <div style="text-align: center; padding: 20px; color: #dc2626;">
             <div style="font-size: 24px; margin-bottom: 8px;">⚠️</div>
             <div>Error loading tokens</div>
           </div>
         `;
+    }
   }
 }
